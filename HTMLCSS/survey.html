@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설문조사 양식</title>
+</head>
+<body>
+    <header>
+    <h1>설문조사 양식</h1>
+    <p>모든 항목에 빠짐없이 체크해주십시오.</p>
+    </header>
+    <hr>
+    
+    <main>
+    <form>
+        <fieldset>
+            <form action="nonename.net" method="post">
+            <legend>개인정보</legend>
+            <label for="name">이름</label>
+            <input type="text" id="name" name="name" placeholder="본명을 입력하세요.">
+            <br>
+            <label for="email">이메일</label>
+            <input type="email" id="email" name="email" placeholder="메일 주소를 쓰세요.">
+            <a href="profile.html" target="_balnk">프로필 바로가기</a>
+        
+        </fieldset>
+        <fieldset>
+            <legend>설문</legend>
+            <p>연령대</p>
+            <input type="radio" id="teen" name="age">
+            <label for="teen">10대</label>
+            <input type="radio" id="twenty" name="age">
+            <label for="twenty">20대</label>
+            <input type="radio" id="therty" name="age">
+            <label for="thirty">30대</label>
+            <input type="radio" id="fourty" name="age">
+            <label for="fourty">40대</label>
+            <input type="radio" id="fifty" name="age">
+            <label for="fifty">50대</label>
+            <input type="radio" id="other" name="age">
+            <label for="other">그 외</label>
+
+            <p>선호하는 장르</p>
+            <input type="checkbox" id="action" name="genre">
+            <label for="action">액션</label>
+            <input type="checkbox" id="comedy" name="genre">
+            <label for="comedy">코미디</label>
+            <input type="checkbox" id="drama" name="genre">
+            <label for="drama">드라마</label>
+            <input type="checkbox" id="horror" name="genre">
+            <label for="horror">호러</label>
+            <input type="checkbox" id="thriller" name="genre">
+            <label for="thriller">스릴러</label>
+            <input type="checkbox" id="romance" name="genre">
+            <label for="romance">로맨스</label>
+            <input type="checkbox" id="sf" name="genre">
+            <label for="sf">SF</label>
+
+
+
+        </fieldset>
+        <fieldset>
+            <legend>기타의견</legend>
+            <select>
+                <option value="movie1">전지적 독자 시점</option>
+                <option value="movie2">킹 오브 킹스</option>
+                <option value="movie2">판타스틱 4: 새로운 출발</option>
+                <option value="movie2">슈퍼맨</option>
+
+            </select>
+            <br>
+            <br>
+
+                <textarea row="10" cols="45" name="comment"></textarea>
+
+        </fieldset>
+        <fieldset>
+            <legend>찐막 기타의견</legend>
+            <table border="1">
+                <caption>기대되는 영화</caption>
+                <tr>
+                    <th>전지적 독자 시점</th>
+                    <th>킹 오브 킹스</th>
+                    <th>판타스틱 4: 새로운 출발</th>
+                    <th>슈퍼맨</th>
+                </tr>
+                <tr>
+                    <td>막상</td>
+                    <td>만드니</td>
+                    <td>쓸 말이</td>
+                    <td>없다</td>
+
+                </tr>
+                </table>
+            
+            <ul>
+                <li>냅다</li>
+                <li>리스트</li>
+                <li>만들어</li>
+                <li>버리기</li>
+
+            </ul>
+ 
+        </fieldset>
+        <input type="submit">
+    </form>
+    </main>
+    <hr>
+    
+    <footer>
+    <p>입력하느라 수고하셨습니다.</p>
+    </footer>
+</body>
+</html>

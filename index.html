@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <title>Admin Page</title>
+    <style>
+      .btn-custom {
+        min-width: 60px;
+        height: 38px;
+        background-color: #26d676;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 14px;
+        padding: 4px 10px;
+        text-align: center;
+        color: white;
+        border: none;
+      }
+      .btn-custom:hover {
+        background-color: #48f898;
+      }
+
+      body.dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .card.dark-mode {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border: 1px solid #333;
+      }
+
+      input.form-control.dark-mode,
+      select.form-control.dark-mode {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+        border-color: #444;
+      }
+
+      .btn-outline-secondary.dark-mode {
+        border-color: #777;
+        color: #ccc;
+      }
+
+      .btn-outline-secondary.dark-mode:hover {
+        background-color: #444;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h3 class="mb-3">신규 등록 상품</h3>
+
+      <!-- 필터 영역 -->
+      <form class="row row-cols-lg-auto g-3 align-items-center mb-4">
+        <div class="col-12">
+          <select class="form-select" id="inlineFormSelectPref">
+            <option value="" disabled selected hidden>
+              카테고리를 골라주세요
+            </option>
+            <option value="tops">상의</option>
+            <option value="bottoms">하의</option>
+            <option value="shoes">신발</option>
+            <option value="accessories">패션 잡화</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <select id="genderSelect" class="form-select">
+            <option value="" hidden selected>성별을 선택해주세요</option>
+            <option value="남성">남성</option>
+            <option value="여성">여성</option>
+          </select>
+        </div>
+
+        <div class="col-3">
+          <input
+            type="search"
+            class="form-control"
+            placeholder="제품명을 입력해주세요"
+          />
+        </div>
+
+        <div class="col-auto">
+          <input type="button" value="조회" class="btn-custom search-btn" />
+        </div>
+
+        <div id="datetimeBox" class="col-12"></div>
+      </form>
+
+      <!-- 상품 테이블 -->
+      <div class="mb-4">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>카테고리</th>
+              <th>브랜드</th>
+              <th>상품명</th>
+              <th>가격</th>
+            </tr>
+          </thead>
+          <tbody id="product_data_Table"></tbody>
+        </table>
+
+        <!-- 상품 추가 영역 -->
+        <div class="d-flex gap-2 mb-3">
+          <input
+            type="text"
+            id="input-category"
+            placeholder="카테고리"
+            class="form-control"
+          />
+          <input
+            type="text"
+            id="input-brand"
+            placeholder="브랜드"
+            class="form-control"
+          />
+          <input
+            type="text"
+            id="input-product"
+            placeholder="상품명"
+            class="form-control"
+          />
+          <input
+            type="text"
+            id="input-price"
+            placeholder="가격"
+            class="form-control"
+          />
+          <button id="add_btn" class="btn-custom">추가</button>
+        </div>
+
+        <!-- 페이지네이션 영역 -->
+        <div id="pagination"></div>
+      </div>
+    </div>
+    <div class="text-end mb-3">
+      <button id="darkModeToggle" class="btn btn-sm btn-outline-secondary">
+        다크 모드
+      </button>
+    </div>
+    <script>
+      // 초기 상품 데이터
+      const product_data = [
+        {
+          category: "상의",
+          brand: "Supreme",
+          product: "슈프림 박스로고 후드티",
+          price: "390,000",
+        },
+        {
+          category: "하의",
+          brand: "DIESEL",
+          product: "디젤 트랙 팬츠",
+          price: "188,000",
+        },
+        {
+          category: "신발",
+          brand: "Nike",
+          product: "에어포스 1",
+          price: "137,000",
+        },
+        {
+          category: "패션잡화",
+          brand: "Music&Goods",
+          product: "빵빵이 키링",
+          price: "29,000",
+        },
+      ];
+
+      const itemsPerPage = 3;
+      let currentPage = 1;
+
+      //  현재 시간 표시 함수
+      function updateDateTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("datetimeBox").innerText = formatted;
+      }
+
+      // 테이블 데이터 렌더링
+      function renderTable(data) {
+        const tbody = document.getElementById("product_data_Table");
+        tbody.innerHTML = "";
+        data.forEach(({ category, brand, product, price }) => {
+          const row = tbody.insertRow();
+          row.insertCell(0).textContent = category;
+          row.insertCell(1).textContent = brand;
+          row.insertCell(2).textContent = product;
+          row.insertCell(3).textContent = price;
+        });
+      }
+
+      // 페이지 버튼 렌더링
+      function renderPagination() {
+        const totalPages = Math.ceil(product_data.length / itemsPerPage);
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.className = "btn btn-outline-secondary btn-sm";
+          if (i === currentPage) btn.classList.add("fw-bold");
+          btn.addEventListener("click", () => renderPage(i));
+          pagination.appendChild(btn);
+        }
+      }
+
+      // 페이지에 해당하는 데이터만 보여주기
+      function renderPage(page) {
+        currentPage = page;
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const visibleData = product_data.slice(start, end);
+        renderTable(visibleData);
+        renderPagination();
+      }
+
+      // 상품 추가 버튼 클릭 처리
+      document.getElementById("add_btn").addEventListener("click", () => {
+        // 입력 필드 가져오기
+        const category = document.getElementById("input-category").value.trim();
+        const brand = document.getElementById("input-brand").value.trim();
+        const product = document.getElementById("input-product").value.trim();
+        const price = document.getElementById("input-price").value.trim();
+
+        // 입력 유효성 검사
+        if (category && brand && product && price) {
+          product_data.push({ category, brand, product, price });
+
+          // 현재 페이지 갱신
+          renderPage(currentPage);
+
+          // 입력창 초기화
+          document.getElementById("input-category").value = "";
+          document.getElementById("input-brand").value = "";
+          document.getElementById("input-product").value = "";
+          document.getElementById("input-price").value = "";
+        } else {
+          alert("모든 항목을 입력해주세요.");
+        }
+      });
+
+      // 다크 모드
+      const toggleBtn = document.getElementById("darkModeToggle");
+      toggleBtn.addEventListener("click", () => {
+        document.body.classList.toggle("dark-mode");
+
+        const card = document.querySelector(".card");
+        card.classList.toggle("dark-mode");
+
+        document
+          .querySelectorAll(".form-control")
+          .forEach((input) => input.classList.toggle("dark-mode"));
+
+        toggleBtn.classList.toggle("dark-mode");
+
+        toggleBtn.textContent = document.body.classList.contains("dark-mode")
+          ? "라이트 모드"
+          : "다크 모드";
+      });
+
+      // 초기 실행
+      setInterval(updateDateTime, 1000); // 시간 1초마다 업데이트
+      updateDateTime(); // 바로 한 번 실행
+      renderPage(1); // 첫 페이지 렌더링
+    </script>
+
+    <!-- 부트스트랩 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

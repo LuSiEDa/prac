@@ -1,0 +1,930 @@
+# 테스트 순서
+
+ 
+
+ruff: 코드 린트 확인
+black: 코드 포맷 확인 (자동 고치려면 수동 실행)
+mypy: 타입 검사
+pytest: 테스트 실행
+coverage: 테스트 커버리지 측정
+ 
+
+ - 코드 스타일 검사
+
+poetry run ruff check .
+
+ 
+
+poetry run black . --check
+
+poetry run black .
+
+ 
+
+poetry run mypy .
+
+ 
+
+ - 테스트 실행
+
+poetry run pytest
+
+ 
+
+poetry run coverage run -m pytest
+
+poetry run coverage report -m
+
+ 
+
+pytest는 기본적으로 test_*.py 또는 *_test.py 라는 파일명만 테스트로 인식함
+
+————————————————————————————————
+
+ 
+
+app/__init__.py
+
+ 
+
+from fastapi import FastAPI
+
+from fastapi.responses import ORJSONResponse
+
+ 
+
+app = FastAPI(
+
+    dafault_responses_class = ORJSONResponse
+
+)
+
+ 
+
+ 
+
+ 
+
+——————————————————————————————
+
+ 
+
+asgi.py
+
+ 
+
+from app import app
+
+ 
+
+if __name__ == '__main__':
+
+    import uvicorn
+
+ 
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+ 
+
+—————————————————————————————
+
+ 
+
+# ORJSON
+
+ 
+
+poetry add orjson
+
+ 
+
+파이썬용 초고속 JSON 라이브러리. 이름 그대로 “optimized + rapid JSON”
+
+ 
+
+ 
+
+ 
+
+# timeit
+
+파이썬 표준 라이브러리. 시간 측정용.
+
+ 
+
+시간 측정
+
+print(timeit.timeit(lambda: json.dumps(TWITTER_JSON)))
+
+print(timeit.timeit(lambda: orjson.dumps(TWITTER_JSON)))
+
+ 
+
+timeit.timeit 에 인자를 받지 않는 간단한 함수를 (여기서는 람다) 전달하면 이 함수를 1000000 번 실행한 후, 전부 수행하는데 걸린 시간을 리턴합니다. (1000000은 default number 이며, 얼마든지 조정이 가능합니다.)
+
+ 
+
+결론 : ORJSON이 빠르다.
+
+ 
+
+———————————————————————————————————
+
+ 
+
+# 자꾸 까먹는 dumps
+
+ 
+
+Python 객체를 JSON 문자열로 변환한다라는 의미에서 쓰이는 함수.
+
+ 
+
+import json
+
+ 
+
+data = {"name": “김오즈, "age": 783}
+
+ 
+
+dumps를 쓰면 dict → JSON 문자열
+
+json_str = json.dumps(data)
+
+print(json_str)
+
+print(type(json_str))
+
+ 
+
+ 
+
+—————————————————————————————————
+
+ 
+
+app/dtos/frozen_config.py
+
+ 
+
+from pydantic import ConfigDict
+
+ 
+
+FROZEN_CONFIG = ConfigDict(frozen=True)
+
+ 
+
+ - frozen -> 생성 이후에는 변경할 수 없는 객체
+
+(immutable)
+
+ 
+
+ - ConfigDict란?
+
+Pydantic 모델을 만들 때 모델의 설정을 외부에서 정의할 수 있다,.
+
+ 
+
+# 라우터 만들기
+
+from fastapi import APIRouter
+
+FastAPI에서 API 경로를 모듈별로 깔끔하게 분리할 때 쓰는 클래스
+
+ 
+
+여러 개의 엔드포인트(GET, POST, PUT, ...)를 하나의 그룹으로 묶어서 관리할 수 있게 해줌.
+
+ 
+
+ 
+
+ 
+
+ - 플라스크랑 비교
+
+특징	Flask (Blueprint)	FastAPI (APIRouter)
+라우터 개념	Blueprint (선택적)	APIRouter (권장)
+비동기 지원	직접 async 사용 가능하지만 제한적	기본 async/await 지원
+자동 문서화	없음	OpenAPI 자동 생성
+의존성 주입	없음	Depends로 라우터 단위 적용 가능
+타입 검증	없음	Pydantic 모델로 자동 검증
+ 
+
+—————————————————————————————————
+
+ - 라우터 지정
+
+ 
+
+@mysql_router.post(
+
+    "",
+
+    description="meeting 을 생성합니다.",
+
+)
+
+async def api_create_meeting_mysql() -> CreateMeetingResponse:
+
+    return CreateMeetingResponse(url_code="abc")
+
+ 
+
+router 를 생성한 후, async 함수를 decorate 했습니다. 이 함수를 fastapi 에서는 path operation function 이라고 부릅니다.
+
+클라이언트가 API 요청을 했을때 이 요청을 처리하는 함수가 path operation function 입니다.
+
+ 
+
+type hint 로 return type CreateMeetingResponse 을 지정하였습니다. 
+
+이렇게 return type 을 지정해 주었기 때문에 이 요청이 성공하면 fastapi 는 어떤 json 응답이 리턴될지 알 수 있습니다.
+
+이는 swagger 에도 자동으로 표시됩니다. (우리가 손으로 직접 swagger json 파일을 수정할 필요가 없습니다)
+
+ 
+
+—————————————————————————————————
+
+ 
+
+ - DTO
+
+데이터 트랜스퍼 오브젝트
+
+:전달만 목적으로 생성한 객체. (수정,추가,삭제 안됨)
+
+ 
+
+ - DTO를 쓰고 Dict를 쓰지 마세요.
+
+path operation function 에서 CreateMeetingResponse 가 아닌 dict[str, str] 을 사용한다면 어떻게 될까요?
+
+ 
+
+-> 멀쩡하게 동작하지만 fastapi는 응답 json에 어떤 키가 들어가고, 그 key의 밸류는 어떤 타입인지 알 수가 없어짐.
+
+ 
+
+————————————————————————————————
+
+ 
+
+정리
+
+구현 보다 앞서 스펙을 동료들과 확정하고, 스펙 + 더미 response 먼저 만들어 배포하자.
+timeit 을 사용해서 간단한 파이썬 코드조각을 성능테스트 할 수 있다.
+pydantic 으로 dto 를 생성할 수 있다.
+dict 대신 dto 를 사용하자!
+ 
+
+————————————————————————————————
+
+ 
+
+# 고유하고 적당히 짧은 alphanumeric 식별자 만들기
+
+ 
+
+from typing import Final 
+
+: 재할당을 막아줌.
+
+BASE: Final[]
+
+ 
+
+ 
+
+ - base 계열 encoding 방식
+
+ 
+
+base64 : 데이터를 64개의 문자로 표현하는 방법.
+
+컴퓨터가 이해하는 0과1 데이터를 문자로 바꿔서 안전하게 전송할 때 사용
+
+이메일, URL, 이미지 전송 등에서 자주 씀.
+
+A–Z (26)  
+
+a–z (26)  
+
+0–9 (10)  
+
++ , / (2)
+
+총 26+26+10+2 = 64개
+
+ 
+
+import base64
+
+ 
+
+data = "안녕"
+
+encoded = base64.b64encode(data.encode())  # bytes 형태로 변환
+
+print(encoded)  # b'7JWI64uI'
+
+decoded = base64.b64decode(encoded).decode()
+
+print(decoded)  # 안녕
+
+ 
+
+->
+
+‘안녕’을 Base64로 바꾸면 7JWI64uI
+
+다시 디코딩하면 원래 문자열로 돌아옴
+
+ 
+
+base62: 데이터를 62개의 문자로 표현하는 방법
+
+주로 URL 단축, 짧은 토큰 생성 등에서 사용
+
+A-Z (26)
+
+a-z (26)
+
+0-9 (10)
+
+총 62개
+
+Base64와 다른 점: +나 / 같은 특수 문자가 없어서 URL에 넣기 좋음
+
+ 
+
+구분	문자 수	특징	주 사용처
+Base64	64	바이너리를 문자로 안전하게 변환	이메일, 이미지 전송 등
+Base62	62	URL-safe, 짧은 표현 가능	URL 단축, 토큰 생성
+ 
+
+ 
+
+ - ClassVar
+
+: 파이썬 타입 힌트에서 사용하는 특별한 표시.
+
+클래스 변수임을 알려줌. -> 인스턴스 변수와 구분할 때 사용.
+
+ 
+
+class Dog:
+
+    species = "Canine"   # 클래스 변수
+
+    def __init__(self, name):
+
+        self.name = name  # 인스턴스 변수
+
+species → 모든 Dog 객체가 공유
+
+name → 각 객체마다 다름
+
+ 
+
+d1 = Dog("Toto")
+
+d2 = Dog("Buddy")
+
+ 
+
+print(d1.species, d2.species)  # Canine Canine
+
+print(d1.name, d2.name)        # Toto Buddy
+
+ 
+
+ 
+
+ - import string
+
+: 영어 대문자, 소문자, 숫자를 쉽게 가져오기 위한 모듈
+
+ 
+
+ 
+
+———————————————————————————————————
+
+ 
+
+ - 식별자 관련 또 한가지 방법
+
+:squids (생략)
+
+ 
+
+# from import만 잔뜩 적어볼까?
+from fastapi import FastAPI, Form, File, UploadFile, Depends
+
+from fastapi.encoders import jsonable_encoder
+
+from fastapi.security import OAuth2PasswordBearer
+
+ 
+Form : HTML <form> 방식으로 전송된 데이터를 받을 때
+File : 폼(form) 데이터에서 파일을 받겠다는 표시.
+FastAPI에서 File(...)처럼 쓰면 해당 엔드포인트에서 파일을 업로드 받도록 해줌.
+
+File은 파일 내용을 바이트(bytes)로 바로 가져오게 됨 (파일 용량이 너무 크면 비효율적)
+
+async def upload_file(file: bytes = File(...)):
+
+ 
+
+UploadFile : FastAPI가 제공하는 파일 객체(File-like object)
+큰 파일도 스트리밍 형태로 처리 가능.
+
+다음과 같은 속성/메서드를 가지고 있음.
+
+.filename	업로드된 파일 이름
+.content_type	MIME 타입 (예: image/png)
+.read()	파일 내용을 바이트로 읽기
+.write()	파일에 쓰기 (응용)
+.seek()	파일 포인터 이동
+.close()	파일 닫기
+ 
+
+jsonable_encoder : (Pydantic 모델과 같은 )객체를 받고 JSON 호환 가능한 버전으로 반환
+Depends : FastAPI에게 “이거 먼저 실행해” (이 함수가 다른 함수가 만들어준 값을 필요로 한다)
+ 
+
+# 폼 데이터
+Json과 비교.
+
+ 
+
+Form → HTML <form> 태그로 보낸 데이터 (application/x-www-form-urlencoded)
+JSON → 주로 API 호출에서 사용하는 데이터 (application/json)
+Form 방식 (브라우저 폼 전송)
+
+username=alice&password=1234
+
+ 
+
+SON 방식 (API 요청 본문)
+
+{ "username": "alice", "password": "1234" }
+
+ 
+
+async def login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
+
+ 
+
+-------------------------------------------------------------------------------------------------
+
+ # 폼 모델
+pip install python-multipart
+
+폼을 사용하려면 먼저 파이썬-멀티파트를 설치해야함.
+
+ 
+
+ - 추가 폼 필드 금지하기
+class FormData(BaseModel):
+
+    username: str
+    password: str
+
+    model_config = {"extra": "forbid"}
+
+ 
+
+-------------------------------------------------------------------------------------------------
+
+ # 파일 요청
+File&UploadFile
+
+File: 경로 함수에서 bytes 형태로 파일 전달
+작은 파일 적합 (전체가 메모리에 로드됨)
+async def create_file(file: bytes = File()):
+    return {"file_size": len(file)}
+UploadFile: 파일 자체 객체로 전달
+스풀 파일 사용 → 메모리 절약, 대용량 파일 처리 가능
+메타데이터 제공 (filename, content_type)
+file-like async 메소드 지원 (read, write, seek, close)
+async def create_upload_file(file: UploadFile):
+    return {"filename": file.filename}
+ 
+File 은 Form 으로부터 직접 상속된 클래스입니다.
+
+하지만 fastapi로부터 Query, Path, File 등을 임포트 할 때, 이것들은 특별한 클래스들을 반환하는 함수라는 것을 기억하기 바랍니다.
+
+File의 본문을 선언할 때, 매개변수가 쿼리 매개변수 또는 본문(JSON) 매개변수로 해석되는 것을 방지하기 위해 File 을 사용해야합니다.
+
+ 
+
+ - Form 데이터
+HTML <form>에서 파일 전송 시 multipart/form-data 사용
+
+파일 포함 시 JSON Body와 같이 받을 수 없음 (HTTP 제한)
+
+여러 파일 업로드 가능.
+
+from typing import List
+
+async def create_upload_files(files: List[UploadFile]):
+    return {"filenames": [file.filename for file in files]}
+
+ 
+
+ 
+
+ - 사용 팁
+작은 파일 → bytes = File()
+
+큰 파일 → UploadFile
+
+여러 파일 → List[bytes] 또는 List[UploadFile]
+
+contents = await file.read()  # async
+
+일반 함수에서는
+
+contents = file.file.read()
+
+핵심 포인트
+
+File() → 경로 매개변수가 JSON/Query로 해석되는 것을 방지
+UploadFile → 메모리 효율적, file-like 객체, 메타데이터 접근 가능
+다중 파일 업로드 지원, HTML form과 OpenAPI 호환 가능
+--------------------------------------------------------------------------------------
+
+# 폼 파일 요청
+ - File 및 Form 업로드
+from fastapi import FastAPI, File, Form, UploadFile
+
+async def create_file(
+
+    file: bytes = File(), fileb: UploadFile = File(), token: str = Form()
+
+ 
+
+파일과 폼 필드는 폼 데이터 형식으로 업로드되어 파일과 폼 필드로 전달됩니다.
+
+어떤 파일들은 bytes로, 또 어떤 파일들은 UploadFile로 선언할 수 있습니다.
+
+---------------------------------------------------------------------------------------------
+
+# 경로 작동 설정
+응답 상태 코드 입력
+
+from fastapi import FastAPI, status
+
+@app.post("/items/", response_model=Item, status_code=status.HTTP_201_CREATED)
+
+각 상태 코드들은 응답에 사용되며, OpenAPI 스키마에 추가됩니다.
+
+ 
+
+ - 태그 
+tags는 문서용 라벨.
+
+(보통 단일 str인) str로 구성된 list와 함께 매개변수 tags를 전달하여, 경로 작동에 태그를 추가할 수 있습니다:
+
+@app.post("/items/", response_model=Item, tags=["items"])
+
+@app.get("/items/", tags=["items"])
+
+@app.get("/users/", tags=["users"])
+전달된 태그들은 OpenAPI의 스키마에 추가되며, 자동 문서 인터페이스에서 사용됩니다:
+
+ 
+
+ - 단일 경로 작동 지원중단
+단일 경로 작동을 없애지 않고 지원중단을 해야한다면, deprecated 매개변수를 전달하면 됩니다.
+
+@app.get("/elements/", tags=["items"], deprecated=True)
+
+-----------------------------------------------------------------------------------------------
+
+# JSON 호환 가능 인코더
+FastAPI에서 Pydantic 모델이나 datetime 객체 같은 것은 바로 JSON에 넣을 수 없음.
+
+datetime → JSON에서 바로 사용 불가
+
+Pydantic 모델 → dict 형태가 아니면 DB나 JSON으로 바로 저장 불가
+
+그래서,
+
+jsonable_encoder() 함수 사용
+
+Pydantic 모델 → dict로 변환
+
+datetime → ISO 8601 문자열로 변환
+
+JSON과 호환 가능한 모든 Python 자료형으로 바꿔줌
+
+ 
+
+from fastapi.encoders import jsonable_encoder
+
+json_compatible_item_data = jsonable_encoder(item)
+fake_db[id] = json_compatible_item_data
+
+--------------------------------------------------------------------------------------------
+
+# 의존성
+어떤 함수가 필요로 하는 것들, 즉 함수가 작동하려면 반드시 있어야 하는 값이나 객체
+
+ - 의존성 주입 : FastAPI가 자동으로 의존성을 제공해주는 시스템
+async def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):
+    return {"q": q, "skip": skip, "limit": limit}
+
+이 함수는 공용 로직(쿼리 파라미터 처리)을 수행하는 의존성 함수
+
+ 
+
+공용 로직 재사용 → 코드 반복 최소화
+DB 연결, 인증/권한 등 공통 기능 관리
+복잡한 API 구조에서도 코드 간결성 유지
+OpenAPI 문서와 자동 통합
+FastAPI에서 의존성 쓰는 법 (엄청 간단 버전)
+
+“이 함수 실행 전에 이것 좀 해주세요”라고 FastAPI에게 말하는 거예요.
+
+그 함수가 리턴한 값이 자동으로 내 경로 함수 변수에 들어옴.
+
+async def common_parameters(q=None, skip=0, limit=100):
+    return {"q": q, "skip": skip, "limit": limit}
+
+@app.get("/items/")
+async def read_items(commons: dict = Depends(common_parameters)):
+    return commons
+ 
+
+Depends(common_parameters) → FastAPI에게 “이거 먼저 실행해” (이 함수가 다른 함수가 만들어준 값을 필요로 한다)
+
+commons → common_parameters가 돌려준 값
+
+이제 /items/에 접근하면 자동으로 {"q":..., "skip":..., "limit":...} 들어옴
+
+ 
+
+ 
+
+웹 서버에는 매번 공통적으로 해야 하는 일이 있어요. 예를 들어:
+
+로그인한 사용자 정보 확인
+DB 연결
+공통 검증
+이걸 매번 각 API 안에서 반복하면 귀찮겠죠?
+Depends를 쓰면 한번만 함수 만들어두고, 필요한 곳마다 가져다 쓰는 것이 가능!
+
+ 
+
+Depends 안에는 함수 이름만 넣어요/()필요없음/, 함수 실행 결과가 API 매개변수에 들어가요.
+의존성은 중첩 가능
+비동기/동기 혼용 가능 ( async def, def)
+CommonsDep = Annotated[dict, Depends(common_parameters)]
+
+@app.get("/items/")
+async def read_items(commons: CommonsDep):
+    return commons
+
+@app.get("/users/")
+async def read_users(commons: CommonsDep):
+    return commons
+
+-> CommonsDep로 재사용 가능(별칭, Type Alias 사용)
+
+ - 함수 vs 클래스 의존성
+FastAPI에서 의존성(Depends)은 “호출 가능(callable)”한 것이면 모두 가능.
+함수
+클래스 (생성자를 호출해서 인스턴스를 만들 수 있는 것)
+핵심: FastAPI는 의존성을 호출하고, 반환값이나 인스턴스를 경로 함수에 전달.
+ - FastAPI Sub-dependencies
+의존성(Dependency) 안에 또 다른 의존성을 넣을 수 있음 → “하위 의존성(Sub-dependency)”
+
+def query_extractor(q: str | None = None):
+    return q
+
+def query_or_cookie_extractor(
+    q: Annotated[str, Depends(query_extractor)],
+    last_query: Annotated[str | None, Cookie()] = None
+):
+        if not q:
+            return last_query
+         return q
+
+@app.get("/items/")
+async def read_query(query_or_default: Annotated[str, Depends(query_or_cookie_extractor)]):
+     return {"q_or_cookie": query_or_default}
+query_or_cookie_extractor → 의존성 함수
+
+ 
+
+여기서 또 다른 의존성 query_extractor 사용
+쿠키 last_query도 사용 가능
+ 
+
+/items/ 경로에서는 query_or_cookie_extractor만 선언
+
+FastAPI가 내부적으로 query_extractor 먼저 실행 → 결과를 query_or_cookie_extractor로 전달
+
+ 
+
+중복 의존성 자동 캐싱
+
+같은 하위 의존성이 여러 번 쓰여도 한 번만 호출
+요청마다 결과를 캐시에 저장하고 필요한 곳에 전달
+캐싱 무시 가능
+
+use_cache=False 옵션 사용 시, 매번 새로 호출 가능 ->  Depends(get_value, use_cache=False)]):
+ - 경로 데코레이터에서 의존성 사용
+경로 함수 안에서 값이 필요 없는 의존성도 실행해야 하는 경우가 있음. (보안 체크, 로그 기록 등)
+
+이때는 함수 매개변수로 Depends를 선언하지 않고 데코레이터에 dependencies 리스트로 넣을 수 있음
+
+@app.get("/items/", dependencies=[Depends(verify_token), Depends(verify_key)])
+async def read_items():
+    return [{"item": "Foo"}, {"item": "Bar"}]
+
+여기서 verify_token, verify_key는 실행되지만 반환값은 read_items()에 전달되지 않음.
+
+-> 실행만 하고 값은 필요 없음.
+
+ - 전역 의존성 
+앱 전체에 적용되는 의존성을 설정 가능
+
+경로마다 일일이 dependencies=[...]를 쓰지 않아도 됨
+
+예: 모든 요청에서 토큰 체크, API 키 체크 등 공통 로직 실행
+
+ 
+
+app = FastAPI(dependencies=[Depends(verify_token), Depends(verify_key)])
+
+ 
+
+ 
+
+ - yield 의존성 
+ 
+
+return 대신 yield 사용 → 의존성을 제공하면서 종료 단계(cleanup)를 실행 가능
+
+yield 앞 코드: 경로 함수나 다른 의존성에 값 전달
+
+yield 뒤 코드: 요청 처리 후 실행 (종료 단계)
+
+async def get_db():
+    db = DBSession() # 시작
+    try:
+        yield db # 경로 작업에 db 제공
+    finally:
+        db.close() # 요청 완료 후 세션 종료
+ 
+
+ 
+
+ - 예외 처리와 yield
+try/except/finally 구조 가능
+경로 작업 중 발생한 예외도 catch 가능
+필요시 raise로 다시 예외 발생 가능
+def get_username():
+    try:
+        yield "Rick"
+    except InternalError:
+        print("로그 남기고 다시 raise")
+        raise
+ - 하위 의존성에서도 사용 가능
+dependency 트리 구조에서도 yield 가능
+종료 단계 순서 자동 보장
+async def dep_a():
+    a = generate_a()
+    try:
+        yield a
+    finally:
+        a.close()
+
+async def dep_b(a = Depends(dep_a)):
+     b = generate_b()
+     try:
+         yield b
+     finally:
+        b.close(a)
+dep_b 종료 후 dep_a 종료 순서도 자동 처리
+
+ - HTTPException과 yield
+종료 단계에서 HTTPException 발생 가능
+단, 이미 응답이 전송되었다면 클라이언트에게 전달 불가
+일반적인 경우 경로 함수에서 예외 처리 추천
+ - 컨텍스트 관리자와 yield
+yield 기반 의존성 = FastAPI 내부에서 컨텍스트 관리자처럼 작동
+with / async with 문으로도 안전하게 리소스 관리 가능
+class MyContext:
+    def __enter__(self):
+        return DBSession()
+    def __exit__(self, exc_type, exc_value, tb):
+        self.db.close()
+
+async def get_db():
+    with MyContext() as db:
+        yield db
+ 
+내부적으로 FastAPI는 contextlib.contextmanager / asynccontextmanager와 비슷한 방식을 사용
+개발자는 직접 데코레이터를 사용할 필요 없음
+ - 핵심 요약
+yield = 경로 함수에 값 제공 + 종료 단계 실행
+try/finally로 예외 처리, cleanup 가능
+하위 의존성에서도 안전하게 사용 가능
+HTTPException 처리 가능하나 경로 함수에서 처리하는 것이 일반적
+내부적으로 FastAPI가 context manager처럼 관리
+------------------------------------------------------------------------------------------------
+
+# Security
+보안, 인증(Authentication), 권한(Authorization) 처리용 도구
+
+1️⃣ OAuth2 관련
+OAuth2PasswordBearer
+클라이언트가 username과 password로 토큰 발급 후, Bearer 토큰을 사용하도록 할 때.
+OAuth2PasswordRequestForm
+토큰 요청 시 Form 데이터를 쉽게 처리하도록 해주는 helper.
+OAuth2AuthorizationCodeBearer
+Authorization Code Flow용 Bearer 토큰 인증.
+OAuth2ImplicitBearer (드물게 사용)
+Implicit Flow용.
+핵심은 OAuth2는 “Bearer 토큰”을 기반으로 인증/인가를 처리하는 구조가 있다는 점입니다.
+
+2️⃣ API Key 관련
+APIKeyHeader – 헤더로 API Key 전달
+APIKeyQuery – 쿼리 파라미터로 API Key 전달
+APIKeyCookie – 쿠키로 API Key 전달
+3️⃣ HTTP Basic / Digest
+HTTPBasic – 기본 HTTP 인증 (username/password)
+HTTPBearer – 단순 Bearer 토큰 인증 (OAuth2 아님)
+HTTPDigest (거의 안 쓰임) – Digest 인증
+4️⃣ OpenID Connect / OAuth2 외 확장
+SecurityScopes – 스코프 기반 권한 검사
+기타 helper 클래스들이 일부 존재
+OAuth2
+인증과 권한을 처리하는 표준 규격
+예: “Google 로그인”, “GitHub 로그인” 같은 시스템이 OAuth2 사용
+HTTPS 기반으로 동작 (암호화는 HTTPS에 맡김)
+OpenID Connect
+OAuth2 기반을 조금 확장한 규격
+Google 로그인 등에서 사용됨
+Facebook 로그인은 독자 방식(OAuth2 변형)
+from typing import Annotated
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+
+app = FastAPI()
+
+# 토큰 발급 URL 선언
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+@app.get("/items/")
+async def read_items(token: Annotated[str, Depends(oauth2_scheme)]):
+    return {"token": token}
+ 
+
+OAuth2PasswordBearer(tokenUrl="token")
+사용자가 로그인할 때 username/password를 보내서 토큰을 발급받을 URL 지정
+아직 실제 /token 엔드포인트는 만들지 않았음
+Depends(oauth2_scheme)
+요청에서 Authorization 헤더에 있는 Bearer 토큰을 가져와서 token 변수에 넣음
+헤더가 없거나 Bearer가 아니면 FastAPI가 자동으로 401 오류 반환
+ - Password Flow 동작 원리 (단순 버전)
+사용자 → 프론트엔드에서 username/password 입력
+프론트엔드 → /token URL로 전송 (아직 구현 전)
+백엔드 → 토큰 발급 (나중에 구현)
+프론트엔드 → 다른 API 호출 시 Authorization: Bearer <token> 헤더 사용
+FastAPI → Depends(oauth2_scheme)가 헤더에서 토큰 추출
+토큰이 없으면 401 오류, 있으면 변수 token으로 경로 함수에서 사용 가능
+ - 요약
+FastAPI에서 Security 모듈 = OAuth2, Bearer 토큰 등 인증 처리 도구
+OAuth2PasswordBearer = 토큰 기반 인증을 쉽게 구현하도록 돕는 클래스
+Depends()와 함께 사용 → 요청에서 자동으로 토큰 가져오기
+최소 몇 줄만으로 기본 인증 구조와 OpenAPI 문서 연동 가능
+실제 토큰 검증은 아직 구현 필요
+ - 경로 함수에서 현재 사용자 쉽게 가져오기
+토큰만 받아서 사용자 정보를 가져오는 의존성 함수(get_current_user) 작성
+
+ 
+
+from fastapi.security import OAuth2PasswordBearer
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+user = fake_decode_token(token) # 토큰 → User 모델
+    return user
+ 
+
+oauth2_scheme이 토큰(str)을 받아옴
+get_current_user는 토큰을 받아서 **User 모델(Pydantic)**을 반환
+FastAPI는 Depends를 통해 이 값을 경로 함수에 주입
+ 
